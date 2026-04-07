@@ -99,7 +99,7 @@ class Predictor:
             image_path : Path to any .jpg / .png image file
 
         Returns:
-            (class_name, confidence)  e.g. ("cat", 0.974)
+            (class_name, confidence)  e.g. ("class_a", 0.974)
         """
         # Step 1 — Load image as RGB (convert removes alpha channel if PNG)
         image = Image.open(image_path).convert("RGB")
