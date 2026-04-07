@@ -19,12 +19,26 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
+from PIL import Image
 
 
 # pin_memory speeds up CPU→GPU transfers, but ONLY works with CUDA.
 # On MPS (Apple Silicon) or CPU it causes a warning and is ignored anyway.
 _PIN_MEMORY = torch.cuda.is_available()
 
+
+def is_valid_image(path: str) -> bool:
+    """
+    Return True only if PIL can open the file.
+    Passed to ImageFolder as `is_valid_file` so corrupt images are
+    silently skipped instead of crashing the DataLoader.
+    """
+    try:
+        with Image.open(path) as img:
+            img.verify()
+        return True
+    except Exception:
+        return False
 
 # ── Transforms ────────────────────────────────────────────────────────────────
 # VIVA NOTE — What is a transform pipeline?
@@ -48,7 +62,7 @@ def get_transforms(split: str, image_size: tuple[int, int]) -> transforms.Compos
             transforms.RandomResizedCrop(image_size),
 
             # Randomly flip 50% of images horizontally.
-            # Cats/dogs look the same mirrored — free extra training data.
+            # Many subjects look the same mirrored — free extra training data.
             transforms.RandomHorizontalFlip(),
 
             # Slightly vary brightness, contrast, saturation.
@@ -93,7 +107,7 @@ def get_dataloaders(
     Returns:
         train_loader  – shuffled batches for training
         val_loader    – ordered batches for evaluation
-        class_names   – list of class labels, e.g. ['cat', 'dog']
+        class_names   – list of class labels, e.g. ['class_a', 'class_b']
 
     VIVA NOTE — What is a DataLoader?
       DataLoader wraps a Dataset and handles:
@@ -106,14 +120,16 @@ def get_dataloaders(
     data_path = Path(data_dir)
 
     # VIVA NOTE — ImageFolder auto-discovers class names from sub-folder names.
-    # class_to_idx maps {"cat": 0, "dog": 1} — sorted alphabetically.
+    # class_to_idx maps e.g. {"class_a": 0, "class_b": 1} — sorted alphabetically.
     train_dataset = datasets.ImageFolder(
         root=str(data_path / "train"),
         transform=get_transforms("train", image_size),
+        is_valid_file=is_valid_image,   # skip any corrupt / unreadable files
     )
     val_dataset = datasets.ImageFolder(
         root=str(data_path / "val"),
         transform=get_transforms("val", image_size),
+        is_valid_file=is_valid_image,
     )
 
     train_loader = DataLoader(
