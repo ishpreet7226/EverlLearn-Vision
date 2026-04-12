@@ -1,0 +1,402 @@
+================================================================================
+  EVERLEARN VISION — PROJECT WALKTHROUGH
+================================================================================
+  This file describes how the project fits together: typical run order, what
+  each file does, technologies used, imports, and main / built-in APIs.
+
+--------------------------------------------------------------------------------
+PART A — HOW DATA ENTERS THE PROJECT (NO PYTHON “IMPORT” OF A CSV)
+--------------------------------------------------------------------------------
+
+  1. You create folders on disk:
+       data/train/<class_name>/*.jpg (or .png, etc.)
+       data/val/<class_name>/*.jpg
+
+  2. Each subfolder name under train/ is ONE CLASS. The training code does not
+     read a separate label file; torchvision.datasets.ImageFolder learns class
+     names from directory names.
+
+  3. Optional scripts (you run them manually from the project root):
+       split_dataset.py   → moves some images from train/ to val/
+       clean_dataset.py   → finds corrupt images (optional delete)
+       verify_dataset.py  → prints counts and checks class names across splits
+
+  4. Training: you run train.py. That IMPORTS src/dataset.py (it does not run
+     dataset.py as a standalone script). dataset.py only executes when another
+     file imports it and calls get_dataloaders().
+
+--------------------------------------------------------------------------------
+PART B — TYPICAL END-TO-END ORDER (USER WORKFLOW)
+--------------------------------------------------------------------------------
+
+  Step 1  (optional)  python split_dataset.py
+          If you only have data under data/train/, this creates data/val/ by
+          moving a random fraction of files (default 20% to val).
+
+  Step 2  (optional)  python clean_dataset.py
+          Dry run lists bad files; add --delete to remove them.
+
+  Step 3  (recommended)  python verify_dataset.py
+          Confirms layout and class consistency.
+
+  Step 4  python train.py
+          Loads data via src/dataset.py, builds model via src/model.py, trains
+          with src/trainer.py, saves checkpoints/model.pth.
+
+  Step 5  streamlit run app.py
+          Loads Predictor from src/predictor.py, shows predictions in the browser.
+
+  Optional demos (not required for training):
+          python dataloader_demo.py   → tests get_dataloaders only
+          python model_demo.py        → inspect backbone and tensor shapes
+
+--------------------------------------------------------------------------------
+PART C — FILE-BY-FILE REFERENCE
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: config.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    Imported by train.py (and potentially other scripts). It is not executed as
+    __main__; values are read when train.py loads.
+
+  WHAT IT DOES:
+    Central place for default paths and hyperparameters: DATA_DIR, IMAGE_SIZE,
+    NUM_WORKERS, BATCH_SIZE, NUM_EPOCHS, LEARNING_RATE, DEVICE string,
+    CHECKPOINT_DIR, BEST_MODEL_NAME.
+
+  NOTE:
+    train.py saves the checkpoint as "model.pth" via a hardcoded path, not
+    BEST_MODEL_NAME. get_device() in src/model.py ignores config.DEVICE and
+    picks cuda / mps / cpu automatically.
+
+  TECH / LIBRARIES:
+    Plain Python module (no third-party imports in this file).
+
+  IMPORTS:
+    (none)
+
+  MAIN SYMBOLS (constants):
+    DATA_DIR, IMAGE_SIZE, NUM_WORKERS, BATCH_SIZE, NUM_EPOCHS, LEARNING_RATE,
+    DEVICE, CHECKPOINT_DIR, BEST_MODEL_NAME
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: src/dataset.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    Not started by itself. Imported by train.py, dataloader_demo.py, and any code
+    that calls get_dataloaders(). Execution happens when get_dataloaders() runs.
+
+  WHAT IT DOES:
+    - Defines is_valid_image(path): uses PIL Image.open + verify() so corrupt
+      files are skipped by ImageFolder.
+    - Defines get_transforms(split, image_size): returns torchvision transforms.
+      "train" = RandomResizedCrop, RandomHorizontalFlip, ColorJitter, ToTensor,
+      Normalize (ImageNet mean/std). "val" = Resize, CenterCrop, ToTensor, Normalize.
+    - Defines get_dataloaders(...): builds two torchvision.datasets.ImageFolder
+      instances (train and val), wraps them in torch.utils.data.DataLoader with
+      shuffle=True for train, pin_memory=True only if CUDA is available.
+
+  TECH / LIBRARIES:
+    PyTorch (torch), torchvision (datasets, transforms), PIL (Image), pathlib.
+
+  IMPORTS:
+    pathlib.Path
+    torch
+    torch.utils.data.DataLoader
+    torchvision.datasets, torchvision.transforms
+    PIL.Image
+
+  KEY FUNCTIONS / CALLABLES YOU WROTE:
+    is_valid_image(path) -> bool
+    get_transforms(split, image_size) -> transforms.Compose
+    get_dataloaders(data_dir, image_size, batch_size, num_workers)
+        -> (train_loader, val_loader, list of class name strings)
+
+  KEY TORCHVISION / PYTORCH APIs USED:
+    datasets.ImageFolder(root, transform=..., is_valid_file=...)
+    transforms.Compose, Resize, CenterCrop, RandomResizedCrop, RandomHorizontalFlip,
+    ColorJitter, ToTensor, Normalize
+    DataLoader(dataset, batch_size, shuffle, num_workers, pin_memory)
+    torch.cuda.is_available()
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: src/model.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    Imported by train.py, src/predictor.py, model_demo.py. Functions run when
+    those callers invoke get_device(), build_model(), or count_parameters().
+
+  WHAT IT DOES:
+    - get_device(): returns torch.device("cuda") if available, else "mps", else "cpu".
+    - build_model(num_classes, backbone, pretrained): loads a torchvision model
+      (resnet18, resnet50, efficientnet_b0, mobilenet_v3_small), replaces the
+      final classification layer so output size = num_classes. Uses weights="DEFAULT"
+      when pretrained is True.
+    - count_parameters(model): sums numel() for total and trainable parameters.
+
+  TECH / LIBRARIES:
+    PyTorch (torch, nn), torchvision.models.
+
+  IMPORTS:
+    torch, torch.nn as nn, torchvision.models
+
+  CONSTANTS:
+    SUPPORTED_BACKBONES — list of allowed backbone name strings
+
+  KEY FUNCTIONS:
+    get_device() -> torch.device
+    build_model(num_classes, backbone="resnet18", pretrained=True) -> nn.Module
+    count_parameters(model) -> (total: int, trainable: int)
+
+  KEY TORCH / TORCHVISION APIs USED:
+    torch.cuda.is_available(), torch.backends.mps.is_available()
+    models.resnet18, resnet50, efficientnet_b0, mobilenet_v3_small (weights=...)
+    nn.Linear(...)
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: src/trainer.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    Imported by train.py. Called once per epoch for training and validation.
+
+  WHAT IT DOES:
+    - train_one_epoch: sets model.train(), loops batches from DataLoader, moves
+      tensors to device, zero_grad, forward, CrossEntropy loss, backward, step,
+      accumulates loss and accuracy. Uses tqdm for progress.
+    - evaluate: decorated with @torch.no_grad(); model.eval(); same forward/loss
+      loop without optimizer updates; returns average loss and accuracy.
+
+  TECH / LIBRARIES:
+    PyTorch, tqdm.
+
+  IMPORTS:
+    torch, torch.nn as nn, torch.utils.data.DataLoader, tqdm.tqdm
+
+  KEY FUNCTIONS:
+    train_one_epoch(model, loader, optimizer, criterion, device) -> (loss, acc)
+    evaluate(model, loader, criterion, device) -> (loss, acc)
+
+  KEY PYTORCH PATTERNS:
+    model.train() / model.eval()
+    tensor.to(device)
+    optimizer.zero_grad(), loss.backward(), optimizer.step()
+    outputs.max(1) for predicted class index
+    @torch.no_grad() on evaluate
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: src/predictor.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    Imported by app.py (and usable from other scripts). Instantiated when the
+    Streamlit app loads the model or when you construct Predictor(path).
+
+  WHAT IT DOES:
+    Loads checkpoints/model.pth with torch.load(map_location=...). Reads keys:
+    class_names, num_classes, backbone, model_state. Rebuilds the same backbone
+    with build_model(..., pretrained=False), load_state_dict, model.eval().
+    predict(image_path): PIL open RGB, inference transforms, unsqueeze batch dim,
+    forward, F.softmax, argmax -> (class_name, confidence).
+    predict_all_probs: returns dict of class -> probability for UI bars.
+
+  TECH / LIBRARIES:
+    PyTorch, torchvision transforms, PIL, pathlib.
+
+  IMPORTS:
+    pathlib.Path, torch, torch.nn.functional as F, PIL.Image, torchvision.transforms
+    (local) build_model, get_device from src.model
+
+  KEY CLASS / FUNCTIONS:
+    _inference_transforms(image_size) -> Compose (private helper)
+    class Predictor:
+        __init__(checkpoint_path, device=None)
+        predict(image_path) -> (str, float)
+        predict_all_probs(image_path) -> dict[str, float]
+
+  KEY APIs:
+    torch.load(..., map_location=...)
+    F.softmax(logits, dim=1)
+    tensor.unsqueeze(0)
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: train.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    You execute: python train.py [--backbone ...] [--epochs ...] etc.
+
+  WHAT IT DOES:
+    Sets up logging to console and logs/training.log. Calls get_device(),
+    get_dataloaders() from config values, build_model(), Adam optimizer,
+    StepLR scheduler, loop: train_one_epoch -> evaluate -> scheduler.step(),
+    saves best checkpoint by validation accuracy to checkpoints/model.pth as a
+    dict containing epoch, backbone, num_classes, class_names, val_acc,
+    model_state, optimizer_state.
+
+  TECH / LIBRARIES:
+    PyTorch, standard library logging, argparse, time, os.
+
+  IMPORTS:
+    argparse, logging, os, time
+    torch, torch.nn as nn
+    config (local module)
+    src.dataset.get_dataloaders
+    src.model.build_model, get_device, SUPPORTED_BACKBONES
+    src.trainer.train_one_epoch, evaluate
+
+  KEY STANDARD LIBRARY:
+    argparse.ArgumentParser, logging.basicConfig / getLogger, os.makedirs,
+    time.time()
+
+  KEY PYTORCH:
+    nn.CrossEntropyLoss, torch.optim.Adam, torch.optim.lr_scheduler.StepLR,
+    model.to(device), torch.save(...)
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: app.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    streamlit run app.py
+
+  WHAT IT DOES:
+    Streamlit UI: checks checkpoints/model.pth exists, @st.cache_resource loads
+    Predictor once, file uploader, saves upload to /tmp/everlearn_upload.jpg,
+    calls predict and predict_all_probs, displays label, metric, progress bars.
+
+  TECH / LIBRARIES:
+    Streamlit, PIL, pathlib, sys (path hack for imports).
+
+  IMPORTS:
+    sys, pathlib.Path, streamlit as st, PIL.Image
+    src.predictor.Predictor
+
+  KEY STREAMLIT APIs:
+    st.set_page_config, st.title, st.sidebar, st.file_uploader, st.columns,
+    st.image, st.metric, st.progress, st.cache_resource
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: verify_dataset.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    python verify_dataset.py [--data_dir path]
+
+  WHAT IT DOES:
+    Walks top-level folders under data_dir (train, val, ...). For each split,
+    counts images per class folder using SUPPORTED_EXTENSIONS. Prints tables.
+    Compares class name sets across splits (missing/extra warnings).
+
+  TECH / LIBRARIES:
+    Standard library only (plus pathlib).
+
+  IMPORTS:
+    os (imported; minimal use), argparse, pathlib.Path, collections.defaultdict
+
+  KEY FUNCTIONS:
+    count_images(folder: Path) -> dict[str, int]
+    verify_dataset(data_dir: str) -> None
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: split_dataset.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    python split_dataset.py [--data_dir] [--val_split] [--seed]
+
+  WHAT IT DOES:
+    For each class under data/train/<class>/, shuffles image list, computes
+    n_val = max(1, int(n * val_split)), moves that many files with shutil.move
+    into data/val/<class>/ (creates directories as needed). Default val_split=0.2.
+
+  TECH / LIBRARIES:
+    Standard library: random, shutil, pathlib, argparse.
+
+  IMPORTS:
+    os, shutil, random, argparse, pathlib.Path
+
+  KEY FUNCTIONS:
+    split_dataset(data_dir, val_split, seed)
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: clean_dataset.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    python clean_dataset.py [--data_dir] [--delete]
+
+  WHAT IT DOES:
+    Path.rglob("*") collects image paths under data_dir; PIL Image.open +
+    verify() in try/except; lists bad paths; optionally Path.unlink() to delete.
+
+  TECH / LIBRARIES:
+    argparse, pathlib, PIL.
+
+  IMPORTS:
+    argparse, pathlib.Path, PIL.Image
+
+  KEY FUNCTIONS:
+    scan_and_clean(data_dir, delete: bool)
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: dataloader_demo.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    python dataloader_demo.py
+
+  WHAT IT DOES:
+    Calls get_dataloaders with num_workers=0, prints classes, dataset sizes,
+    one batch shape and label examples, min/max of normalized pixels.
+
+  IMPORTS:
+    sys, pathlib.Path, torch, src.dataset.get_dataloaders
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: model_demo.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    python model_demo.py [--backbone] [--num_classes]
+
+  WHAT IT DOES:
+    get_device(), build_model(), count_parameters(), dummy torch.randn batch,
+    model.eval(), torch.no_grad() forward, prints output shape and classifier layer.
+
+  IMPORTS:
+    sys, argparse, pathlib.Path, torch, src.model (build_model, get_device,
+    count_parameters, SUPPORTED_BACKBONES)
+
+  KEY TORCH APIs:
+    torch.randn, .to(device), torch.cuda.get_device_name(0), torch.no_grad()
+
+
+────────────────────────────────────────────────────────────────────────────────
+FILE: src/__init__.py
+────────────────────────────────────────────────────────────────────────────────
+  WHEN IT RUNS:
+    Loaded when Python treats src as a package (import src.dataset, etc.).
+
+  WHAT IT DOES:
+    Package docstring only; no logic.
+
+================================================================================
+PART D — requirements.txt (PROJECT-LEVEL DEPENDENCIES)
+================================================================================
+
+  torch, torchvision     — deep learning and pretrained models
+  Pillow                 — image load / verify
+  matplotlib             — listed in requirements (not imported by core scripts)
+  scikit-learn           — listed in requirements (not imported by core scripts)
+  tqdm                   — progress bars in trainer
+  numpy                  — common dependency of the stack / numerical arrays
+  streamlit              — web app
+
+================================================================================
+END OF WALKTHROUGH
+================================================================================
