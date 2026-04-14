@@ -1,12 +1,47 @@
 """
 EverLearn Vision – Train/Val Split Script
 ==========================================
-Moves a percentage of images from data/train/<class>
-into data/val/<class> randomly.
+
+DO YOU NEED TO RUN THIS?
+  → YES, only if your dataset is NOT already split into train/ and val/ folders.
+  → NO,  if you already have both data/train/ and data/val/ ready.
+
+WHAT THIS SCRIPT DOES (plain English):
+  When you download a dataset from Kaggle or elsewhere, it usually comes as:
+      data/train/cats/...  (all images in one place)
+  But PyTorch needs a separate val/ folder to test accuracy during training.
+  This script MOVES a random percentage of images from train/ → val/
+  without copying or duplicating — it physically relocates files.
+
+HOW IT WORKS — step by step:
+  1. It reads --val_split (default 0.20 = 20%) from the command line.
+  2. It scans every class folder inside data/train/  (e.g. cats/, dogs/).
+  3. For each class, it shuffles the image list randomly (seeded for reproducibility).
+  4. It takes the first 20% of that shuffled list as the validation images.
+  5. It creates data/val/<class>/ if it doesn't exist.
+  6. It MOVES (not copies) each chosen image there using shutil.move().
+  Result: data/train/ now has 80% of images, data/val/ has 20%.
+
+WHY 80/20 IS THE STANDARD SPLIT:
+  You want most data for training (so the model learns well).
+  You need SOME held-out data for validation (to measure real accuracy).
+  80/20 is the industry-standard compromise, attributed to the Pareto Principle.
+
+KEY LIBRARY — shutil.move(src, dst):
+  From Python's standard 'shutil' module (shell utilities).
+  Moves a file from src to dst path. If on the same filesystem, it's an
+  instant rename (no file data copied). Cross-filesystem = copy + delete.
+  We use this (not shutil.copy) because we DON'T want dataset duplication.
+
+KEY LIBRARY — random.seed(42):
+  Setting a seed means the 'randomness' is REPRODUCIBLE. If two people
+  run this script with seed=42, they get the exact same train/val split.
+  This is critical for reproducible experiments in academic settings.
 
 Usage:
-    python split_dataset.py                  # 80/20 split (default)
+    python split_dataset.py                   # 80/20 split (default)
     python split_dataset.py --val_split 0.15  # 85/15 split
+    python split_dataset.py --seed 99         # different random shuffle
 """
 
 import os
