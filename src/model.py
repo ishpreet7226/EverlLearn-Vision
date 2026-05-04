@@ -53,13 +53,15 @@ def get_device() -> torch.device:
 
     VIVA NOTE — Device priority:
       1. CUDA  — NVIDIA GPU (fastest)
-      2. MPS   — Apple Silicon GPU (Mac M1/M2/M3)
+      2. MPS   — Apple Silicon GPU (Mac M1/M2/M3/M4)
       3. CPU   — Fallback (slowest)
     """
     if torch.cuda.is_available():
-        return torch.device("cuda")
+      print("cuda")
+      return torch.device("cuda")
     if torch.backends.mps.is_available():
-        return torch.device("mps")
+      print("Mps")
+      return torch.device("mps")
     return torch.device("cpu")
 
 
