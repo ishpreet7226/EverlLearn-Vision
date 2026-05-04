@@ -19,6 +19,7 @@ from contextlib import asynccontextmanager
 from io import BytesIO
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
@@ -63,6 +64,14 @@ app = FastAPI(
     description="Image classification API powered by a fine-tuned ResNet model.",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+# ── CORS — allow the Next.js frontend to call this API ────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

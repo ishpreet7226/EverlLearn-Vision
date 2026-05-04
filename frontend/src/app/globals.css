@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+/* ── Tailwind v4 theme tokens ──────────────────────────────────────────────── */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border-color);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-inter);
+}
+
+/* ── CSS custom properties (dark-first design) ─────────────────────────────── */
+:root {
+  --background: #0b0f1a;
+  --foreground: #e8ecf4;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-hover: rgba(255, 255, 255, 0.07);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --accent: #7c5cfc;
+  --accent-light: #a78bfa;
+  --muted: #6b7280;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────── */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter, "Inter", system-ui, sans-serif);
+}
+
+/* ── Glass card ─────────────────────────────────────────────────────────────── */
+.glass-card {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* ── Upload zone ────────────────────────────────────────────────────────────── */
+.upload-zone {
+  border: 2px dashed rgba(124, 92, 252, 0.3);
+  border-radius: 1rem;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(124, 92, 252, 0.06);
+  box-shadow: 0 0 32px rgba(124, 92, 252, 0.08);
+}
+
+/* ── Probability bar ────────────────────────────────────────────────────────── */
+.prob-bar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  height: 10px;
+}
+
+.prob-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7c5cfc, #a78bfa);
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.prob-bar-fill.top {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+/* ── Confidence ring ────────────────────────────────────────────────────────── */
+.confidence-ring {
+  --size: 120px;
+  --stroke: 8;
+  width: var(--size);
+  height: var(--size);
+}
+
+.confidence-ring circle {
+  fill: none;
+  stroke-width: var(--stroke);
+  stroke-linecap: round;
+}
+
+.confidence-ring .track {
+  stroke: rgba(255, 255, 255, 0.06);
+}
+
+.confidence-ring .fill {
+  stroke: var(--accent);
+  transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.confidence-ring.high .fill {
+  stroke: #10b981;
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────────────── */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(124, 92, 252, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(124, 92, 252, 0.3);
+  }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out both;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 1.2s linear infinite;
+}
+
+/* stagger children */
+.stagger > :nth-child(1) { animation-delay: 0ms; }
+.stagger > :nth-child(2) { animation-delay: 80ms; }
+.stagger > :nth-child(3) { animation-delay: 160ms; }
+.stagger > :nth-child(4) { animation-delay: 240ms; }
+.stagger > :nth-child(5) { animation-delay: 320ms; }
