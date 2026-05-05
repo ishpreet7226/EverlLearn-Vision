@@ -23,6 +23,10 @@ logs/
 runs/
 outputs/
 
+# MLflow
+mlruns/
+best_model/
+
 # Jupyter
 .ipynb_checkpoints/
 

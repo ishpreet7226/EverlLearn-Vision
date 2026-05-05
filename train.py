@@ -1,11 +1,21 @@
 """
 EverLearn Vision – Main Training Script
 =========================================
-Full training + validation pipeline with epoch logging and checkpointing.
+Full training + validation pipeline with epoch logging, checkpointing,
+and MLflow experiment tracking.
+
+MLflow tracks:
+  - Hyperparameters (backbone, lr, epochs, batch_size, ...)
+  - Per-epoch metrics (train_loss, val_loss, train_acc, val_acc, lr)
+  - Model artifacts (best checkpoint .pth file)
 
 Usage:
     python train.py
     python train.py --backbone resnet50 --epochs 20 --lr 0.0005
+
+MLflow UI:
+    mlflow ui --port 5000
+    open http://localhost:5000
 """
 
 import argparse
@@ -13,6 +23,7 @@ import logging
 import os
 import time
 
+import mlflow
 import torch
 import torch.nn as nn
 
@@ -49,6 +60,10 @@ def main(args: argparse.Namespace) -> None:
     log.info(f"  Epochs   : {args.epochs}")
     log.info(f"  Batch    : {args.batch_size}")
     log.info(f"  LR       : {args.lr}")
+
+    # ── MLflow setup ──────────────────────────────────────────────────────────
+    mlflow.set_experiment("EverLearn-Vision")
+    run_name = f"{args.backbone}_lr{args.lr}_ep{args.epochs}"
 
     # ── Data ──────────────────────────────────────────────────────────────────
     train_loader, val_loader, class_names = get_dataloaders(
@@ -88,58 +103,97 @@ def main(args: argparse.Namespace) -> None:
 
     log.info("\n" + "-" * 55)
 
-    for epoch in range(1, args.epochs + 1):
-        epoch_start = time.time()
+    # ── MLflow run ────────────────────────────────────────────────────────────
+    with mlflow.start_run(run_name=run_name):
 
-        # ── Train ──────────────────────────────────────────────────────────────
-        train_loss, train_acc = train_one_epoch(
-            model, train_loader, optimizer, criterion, device
-        )
+        # Log all hyperparameters once at the start
+        mlflow.log_params({
+            "backbone":      args.backbone,
+            "epochs":        args.epochs,
+            "batch_size":    args.batch_size,
+            "learning_rate": args.lr,
+            "optimizer":     "Adam",
+            "scheduler":     "StepLR(step=5, gamma=0.5)",
+            "num_classes":   num_classes,
+            "class_names":   ", ".join(class_names),
+            "image_size":    str(config.IMAGE_SIZE),
+            "device":        str(device),
+            "train_samples": len(train_loader.dataset),
+            "val_samples":   len(val_loader.dataset),
+        })
+        log.info("📊  MLflow run started — tracking enabled")
 
-        # ── Validate ───────────────────────────────────────────────────────────
-        val_loss, val_acc = evaluate(
-            model, val_loader, criterion, device
-        )
+        for epoch in range(1, args.epochs + 1):
+            epoch_start = time.time()
 
-        # Decay learning rate according to schedule
-        scheduler.step()
-
-        epoch_time = time.time() - epoch_start
-        current_lr = scheduler.get_last_lr()[0]
-
-        # ── Epoch summary ──────────────────────────────────────────────────────
-        log.info(
-            f"Epoch [{epoch:>2}/{args.epochs}]  "
-            f"Train loss: {train_loss:.4f}  acc: {train_acc*100:5.2f}%  │  "
-            f"Val loss: {val_loss:.4f}  acc: {val_acc*100:5.2f}%  │  "
-            f"LR: {current_lr:.2e}  │  {epoch_time:.1f}s"
-        )
-
-        # ── Save best checkpoint ───────────────────────────────────────────────
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
-
-            # Save weights AND class names together so we can reload and predict
-            # without needing to know the folder structure at inference time.
-            torch.save(
-                {
-                    "epoch":        epoch,
-                    "backbone":     args.backbone,
-                    "num_classes":  num_classes,
-                    "class_names":  class_names,      # ← labels baked in!
-                    "val_acc":      val_acc,
-                    "model_state":  model.state_dict(),
-                    "optimizer_state": optimizer.state_dict(),
-                },
-                save_path,
+            # ── Train ──────────────────────────────────────────────────────────
+            train_loss, train_acc = train_one_epoch(
+                model, train_loader, optimizer, criterion, device
             )
-            log.info(f"  ✅  New best  ({val_acc*100:.2f}%)  → saved to {save_path}")
 
-    log.info("-" * 55)
-    log.info(f"🎉  Training complete. Best val accuracy: {best_val_acc*100:.2f}%")
-    log.info(f"    Checkpoint : {save_path}")
-    log.info(f"    Log file   : logs/training.log")
-    log.info("=" * 55)
+            # ── Validate ───────────────────────────────────────────────────────
+            val_loss, val_acc = evaluate(
+                model, val_loader, criterion, device
+            )
+
+            # Decay learning rate according to schedule
+            scheduler.step()
+
+            epoch_time = time.time() - epoch_start
+            current_lr = scheduler.get_last_lr()[0]
+
+            # ── Log metrics to MLflow ──────────────────────────────────────────
+            mlflow.log_metrics(
+                {
+                    "train_loss":    train_loss,
+                    "train_acc":     train_acc,
+                    "val_loss":      val_loss,
+                    "val_acc":       val_acc,
+                    "learning_rate": current_lr,
+                },
+                step=epoch,
+            )
+
+            # ── Epoch summary ──────────────────────────────────────────────────
+            log.info(
+                f"Epoch [{epoch:>2}/{args.epochs}]  "
+                f"Train loss: {train_loss:.4f}  acc: {train_acc*100:5.2f}%  │  "
+                f"Val loss: {val_loss:.4f}  acc: {val_acc*100:5.2f}%  │  "
+                f"LR: {current_lr:.2e}  │  {epoch_time:.1f}s"
+            )
+
+            # ── Save best checkpoint ───────────────────────────────────────────
+            if val_acc > best_val_acc:
+                best_val_acc = val_acc
+
+                # Save weights AND class names together so we can reload and predict
+                # without needing to know the folder structure at inference time.
+                torch.save(
+                    {
+                        "epoch":        epoch,
+                        "backbone":     args.backbone,
+                        "num_classes":  num_classes,
+                        "class_names":  class_names,      # ← labels baked in!
+                        "val_acc":      val_acc,
+                        "model_state":  model.state_dict(),
+                        "optimizer_state": optimizer.state_dict(),
+                    },
+                    save_path,
+                )
+                log.info(f"  ✅  New best  ({val_acc*100:.2f}%)  → saved to {save_path}")
+
+        # ── Log final metrics + model artifact to MLflow ──────────────────────
+        mlflow.log_metric("best_val_acc", best_val_acc)
+        if os.path.exists(save_path):
+            mlflow.log_artifact(save_path)
+            log.info(f"📦  Model artifact logged to MLflow")
+
+        log.info("-" * 55)
+        log.info(f"🎉  Training complete. Best val accuracy: {best_val_acc*100:.2f}%")
+        log.info(f"    Checkpoint : {save_path}")
+        log.info(f"    Log file   : logs/training.log")
+        log.info(f"    MLflow UI  : mlflow ui --port 5000")
+        log.info("=" * 55)
 
 
 if __name__ == "__main__":
