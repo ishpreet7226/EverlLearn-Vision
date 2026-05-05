@@ -1,11 +1,13 @@
 """
 EverLearn Vision – FastAPI Backend
 ====================================
-Production-ready REST API for image classification.
+Production-ready REST API for image classification with feedback storage.
 
 Endpoints:
     GET  /          → Health check + model metadata
     POST /predict   → Upload an image, receive predicted label + confidence
+    POST /feedback  → Store user correction of a prediction
+    GET  /feedback  → Retrieve all stored feedback (paginated)
 
 Run:
     uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -18,14 +20,18 @@ Interactive docs:
 from contextlib import asynccontextmanager
 from io import BytesIO
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.model_loader import ModelBundle, load_model
 from app.inference import run_prediction
+from app.database import Base, engine, get_db
+from app.schemas import FeedbackCreate, FeedbackListResponse, FeedbackResponse
+from app import crud
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 CHECKPOINT_PATH = "checkpoints/model.pth"
@@ -44,9 +50,19 @@ model_bundle: ModelBundle | None = None
 # ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load the model once at startup; release on shutdown."""
+    """Load the model and create DB tables at startup."""
     global model_bundle
     print("🚀  Starting EverLearn Vision API...")
+
+    # Create database tables (if they don't already exist)
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("✅  Database tables ready")
+    except Exception as e:
+        print(f"⚠️  Database connection failed: {e}")
+        print("    Feedback endpoints will not work.")
+
+    # Load ML model
     try:
         model_bundle = load_model(CHECKPOINT_PATH)
         print("✅  Model ready — accepting requests")
@@ -179,3 +195,51 @@ async def predict(file: UploadFile = File(..., description="Image file to classi
         confidence=result.confidence,
         all_probabilities=result.all_probabilities,
     )
+
+
+# ── POST /feedback — Store user correction ────────────────────────────────────
+@app.post(
+    "/feedback",
+    response_model=FeedbackResponse,
+    status_code=201,
+    summary="Submit prediction feedback",
+    description=(
+        "Store a user's correction when the model's prediction was wrong. "
+        "This data can later be used for model retraining."
+    ),
+)
+def submit_feedback(
+    feedback_data: FeedbackCreate,
+    db: Session = Depends(get_db),
+):
+    try:
+        row = crud.create_feedback(db, feedback_data)
+        return row
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save feedback: {e}",
+        )
+
+
+# ── GET /feedback — Retrieve stored feedback ──────────────────────────────────
+@app.get(
+    "/feedback",
+    response_model=FeedbackListResponse,
+    summary="List all feedback",
+    description="Retrieve all stored feedback entries, newest first, with pagination.",
+)
+def list_feedback(
+    skip: int = Query(0, ge=0, description="Number of entries to skip"),
+    limit: int = Query(50, ge=1, le=200, description="Max entries to return"),
+    db: Session = Depends(get_db),
+):
+    try:
+        entries = crud.get_all_feedback(db, skip=skip, limit=limit)
+        count = crud.get_feedback_count(db)
+        return FeedbackListResponse(count=count, feedback=entries)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve feedback: {e}",
+        )
