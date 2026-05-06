@@ -1,13 +1,16 @@
 """
 EverLearn Vision – FastAPI Backend
 ====================================
-Production-ready REST API for image classification with feedback storage.
+Production-ready REST API for image classification with feedback storage
+and self-improving model management.
 
 Endpoints:
-    GET  /          → Health check + model metadata
-    POST /predict   → Upload an image, receive predicted label + confidence
-    POST /feedback  → Store user correction of a prediction
-    GET  /feedback  → Retrieve all stored feedback (paginated)
+    GET  /              → Health check + model metadata
+    POST /predict       → Upload an image, receive predicted label + confidence
+    POST /feedback      → Store user correction of a prediction
+    GET  /feedback      → Retrieve all stored feedback (paginated)
+    POST /reload-model  → Hot-reload the latest model without restarting
+    POST /retrain       → Trigger retraining pipeline in the background
 
 Run:
     uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -19,6 +22,8 @@ Interactive docs:
 
 from contextlib import asynccontextmanager
 from io import BytesIO
+import subprocess
+import sys
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -95,6 +100,7 @@ app.add_middleware(
 class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
+    model_version: int | None = None
     backbone: str | None = None
     classes: list[str] | None = None
     device: str | None = None
@@ -124,6 +130,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         model_loaded=True,
+        model_version=model_bundle.version,
         backbone=model_bundle.backbone,
         classes=model_bundle.class_names,
         device=str(model_bundle.device),
@@ -242,4 +249,61 @@ def list_feedback(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve feedback: {e}",
+        )
+
+
+# ── POST /reload-model — Hot-reload latest model ──────────────────────────────
+@app.post(
+    "/reload-model",
+    summary="Hot-reload the model",
+    description=(
+        "Reload checkpoints/model.pth into memory without restarting the server. "
+        "Called automatically after successful retraining."
+    ),
+)
+def reload_model():
+    global model_bundle
+    try:
+        model_bundle = load_model(CHECKPOINT_PATH)
+        return {
+            "status": "reloaded",
+            "version": model_bundle.version,
+            "backbone": model_bundle.backbone,
+            "classes": model_bundle.class_names,
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to reload model: {e}",
+        )
+
+
+# ── POST /retrain — Trigger retraining pipeline ─────────────────────────────
+@app.post(
+    "/retrain",
+    summary="Trigger model retraining",
+    description=(
+        "Launch the retraining pipeline as a background process. "
+        "The pipeline reads feedback corrections from the database, "
+        "fine-tunes the model, and promotes it if accuracy improves."
+    ),
+)
+def trigger_retrain():
+    try:
+        # Launch retrain.py as a detached background process
+        process = subprocess.Popen(
+            [sys.executable, "retrain.py"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        return {
+            "status": "started",
+            "pid": process.pid,
+            "message": "Retraining pipeline launched in background. "
+                       "Check logs/retrain.log for progress.",
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start retraining: {e}",
         )

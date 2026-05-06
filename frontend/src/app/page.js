@@ -1,16 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ImageUploader from "./components/ImageUploader";
 import PredictionResult from "./components/PredictionResult";
+import FeedbackForm from "./components/FeedbackForm";
 
 const API_URL = "http://localhost:8000";
 
 export default function Home() {
   const [file, setFile] = useState(null);
+  const [fileName, setFileName] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [classList, setClassList] = useState([]);
+  const [modelVersion, setModelVersion] = useState(null);
+
+  // Fetch class list + model info on mount
+  useEffect(() => {
+    fetch(`${API_URL}/`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.classes) setClassList(data.classes);
+        if (data.model_version) setModelVersion(data.model_version);
+      })
+      .catch(() => {});
+  }, []);
 
   // ── Call FastAPI /predict ──────────────────────────────────────────────────
   const handlePredict = async () => {
@@ -53,8 +68,14 @@ export default function Home() {
 
   const handleReset = () => {
     setFile(null);
+    setFileName("");
     setResult(null);
     setError("");
+  };
+
+  const handleFileSelect = (f) => {
+    setFile(f);
+    setFileName(f.name);
   };
 
   return (
@@ -101,7 +122,7 @@ export default function Home() {
           </div>
 
           {/* Upload */}
-          <ImageUploader onFileSelect={setFile} disabled={loading} />
+          <ImageUploader onFileSelect={handleFileSelect} disabled={loading} />
 
           {/* Action buttons */}
           <div className="flex items-center gap-3">
@@ -179,13 +200,24 @@ export default function Home() {
               allProbabilities={result.all_probabilities}
             />
           )}
+
+          {/* Feedback correction form */}
+          {result && (
+            <FeedbackForm
+              predictedLabel={result.label}
+              confidence={result.confidence}
+              fileName={fileName}
+              classList={classList}
+              onFeedbackSent={() => {}}
+            />
+          )}
         </div>
       </div>
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
       <footer className="border-t border-[var(--border-color)] backdrop-blur-md bg-[var(--background)]/60">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between text-xs text-[var(--muted)]">
-          <p>EverLearn Vision • ResNet-18 • PyTorch + FastAPI</p>
+          <p>EverLearn Vision • ResNet-18{modelVersion ? ` v${modelVersion}` : ''} • PyTorch + FastAPI</p>
           <p>
             Backend:{" "}
             <code className="bg-[var(--surface)] px-1.5 py-0.5 rounded text-[var(--accent-light)]">

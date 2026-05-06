@@ -29,6 +29,7 @@ class ModelBundle:
     class_names: list[str]
     device: torch.device
     backbone: str
+    version: int = 1
 
 
 def load_model(checkpoint_path: str) -> ModelBundle:
@@ -69,6 +70,7 @@ def load_model(checkpoint_path: str) -> ModelBundle:
     backbone = ckpt["backbone"]
     num_classes = ckpt["num_classes"]
     class_names = ckpt["class_names"]
+    version = ckpt.get("version", 1)  # Default to v1 for old checkpoints
 
     # Rebuild the exact same architecture (pretrained=False because
     # weights come from the checkpoint, not from ImageNet)
@@ -84,7 +86,7 @@ def load_model(checkpoint_path: str) -> ModelBundle:
     # Switch to eval mode — disables dropout and fixes BatchNorm statistics
     model.eval()
 
-    print(f"✅  Model loaded: {backbone} ({num_classes} classes)")
+    print(f"✅  Model loaded: {backbone} v{version} ({num_classes} classes)")
     print(f"    Classes : {class_names}")
     print(f"    Device  : {device}")
 
@@ -93,4 +95,5 @@ def load_model(checkpoint_path: str) -> ModelBundle:
         class_names=class_names,
         device=device,
         backbone=backbone,
+        version=version,
     )
