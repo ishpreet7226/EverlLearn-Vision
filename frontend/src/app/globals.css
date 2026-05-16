@@ -13,9 +13,10 @@
   --font-sans: var(--font-inter);
 }
 
-/* ── CSS custom properties (dark-first design) ─────────────────────────────── */
-:root {
-  --background: #0b0f1a;
+/* ── Dark theme (default) ──────────────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --background: #0a0e1a;
   --foreground: #e8ecf4;
   --surface: rgba(255, 255, 255, 0.04);
   --surface-hover: rgba(255, 255, 255, 0.07);
@@ -23,6 +24,22 @@
   --accent: #7c5cfc;
   --accent-light: #a78bfa;
   --muted: #6b7280;
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --glow-color: rgba(124, 92, 252, 0.15);
+}
+
+/* ── Light theme ───────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --surface: rgba(0, 0, 0, 0.02);
+  --surface-hover: rgba(0, 0, 0, 0.05);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --accent: #7c5cfc;
+  --accent-light: #6d4de8;
+  --muted: #94a3b8;
+  --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --glow-color: rgba(124, 92, 252, 0.08);
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────────── */
@@ -30,6 +47,19 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter, "Inter", system-ui, sans-serif);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ── Scrollbar styling ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 999px;
 }
 
 /* ── Glass card ─────────────────────────────────────────────────────────────── */
@@ -39,21 +69,28 @@ body {
   border-radius: 1rem;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(124, 92, 252, 0.15);
+  box-shadow: var(--card-shadow), 0 0 40px var(--glow-color);
 }
 
 /* ── Upload zone ────────────────────────────────────────────────────────────── */
 .upload-zone {
   border: 2px dashed rgba(124, 92, 252, 0.3);
   border-radius: 1rem;
-  transition: all 0.25s ease;
   cursor: pointer;
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
 }
 
 .upload-zone:hover,
 .upload-zone.drag-over {
   border-color: var(--accent);
   background: rgba(124, 92, 252, 0.06);
-  box-shadow: 0 0 32px rgba(124, 92, 252, 0.08);
+  box-shadow: 0 0 40px rgba(124, 92, 252, 0.1);
 }
 
 /* ── Probability bar ────────────────────────────────────────────────────────── */
@@ -64,11 +101,14 @@ body {
   height: 10px;
 }
 
+[data-theme="light"] .prob-bar-track {
+  background: rgba(0, 0, 0, 0.06);
+}
+
 .prob-bar-fill {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, #7c5cfc, #a78bfa);
-  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .prob-bar-fill.top {
@@ -93,9 +133,12 @@ body {
   stroke: rgba(255, 255, 255, 0.06);
 }
 
+[data-theme="light"] .confidence-ring .track {
+  stroke: rgba(0, 0, 0, 0.06);
+}
+
 .confidence-ring .fill {
   stroke: var(--accent);
-  transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1);
   transform: rotate(-90deg);
   transform-origin: center;
 }
@@ -104,47 +147,36 @@ body {
   stroke: #10b981;
 }
 
-/* ── Keyframes ──────────────────────────────────────────────────────────────── */
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* ── Skeleton shimmer ──────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
 }
 
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(124, 92, 252, 0.15);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(124, 92, 252, 0.3);
-  }
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--surface-hover) 37%,
+    var(--surface) 63%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 0.5rem;
 }
 
+/* ── Spinner (for loading button) ──────────────────────────────────────────── */
 @keyframes spin-slow {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.5s ease-out both;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
 }
 
 .animate-spin-slow {
   animation: spin-slow 1.2s linear infinite;
 }
 
-/* stagger children */
-.stagger > :nth-child(1) { animation-delay: 0ms; }
-.stagger > :nth-child(2) { animation-delay: 80ms; }
-.stagger > :nth-child(3) { animation-delay: 160ms; }
-.stagger > :nth-child(4) { animation-delay: 240ms; }
-.stagger > :nth-child(5) { animation-delay: 320ms; }
+/* ── Selection highlight ───────────────────────────────────────────────────── */
+::selection {
+  background: rgba(124, 92, 252, 0.3);
+  color: inherit;
+}
