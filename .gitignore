@@ -34,3 +34,4 @@ best_model/
 .DS_Store
 Thumbs.db
 mlflow.db
+everlearn.db

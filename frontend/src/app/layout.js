@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "EverLearn ML — Self-Improving Image Classification",
+  title: "EverLearn ML — Build Your Own Image Classifier",
   description:
-    "Upload any image and get instant AI-powered classification with confidence scores. Powered by a self-improving ResNet model, FastAPI, and PyTorch.",
+    "Teachable Machine for image classification. Create classes, upload images, train a model, and test predictions — all from the browser. Powered by PyTorch and FastAPI.",
 };
 
 export default function RootLayout({ children }) {

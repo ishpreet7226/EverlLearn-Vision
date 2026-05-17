@@ -12,7 +12,7 @@ NUM_WORKERS = 4            # DataLoader workers (set 0 on Windows if issues)
 BATCH_SIZE = 32
 NUM_EPOCHS = 10
 LEARNING_RATE = 1e-3
-DEVICE = "cuda"            # "cuda" | "mps" | "cpu"
+DEVICE = "auto"            # Auto-detected at runtime (cuda → mps → cpu)
 
 # ── Checkpoints ───────────────────────────────────────────────────────────────
 CHECKPOINT_DIR = "checkpoints"

@@ -1,12 +1,12 @@
 """
 EverLearn Vision – Retraining Pipeline
 ========================================
-Self-improving ML loop: reads user corrections from PostgreSQL,
+Self-improving ML loop: reads user corrections from the database,
 augments the original dataset, fine-tunes the current model,
 and promotes the new version only if accuracy improves.
 
 Workflow:
-    1. Query feedback corrections from PostgreSQL
+    1. Query feedback corrections from the database (SQLite or PostgreSQL)
     2. Find matching images in data/ and symlink to correct class folders
     3. Load current best model weights (fine-tuning, not from scratch)
     4. Train for N epochs on the augmented dataset
@@ -205,7 +205,7 @@ def main(args: argparse.Namespace) -> None:
     log.info("=" * 60)
 
     # ── Step 1: Fetch feedback corrections ────────────────────────────────────
-    log.info("\n📋  Step 1: Fetching feedback corrections from PostgreSQL...")
+    log.info("\n📋  Step 1: Fetching feedback corrections from database...")
     corrections = fetch_feedback_corrections()
     log.info(f"    Found {len(corrections)} corrections")
 
