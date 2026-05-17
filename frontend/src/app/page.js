@@ -72,7 +72,7 @@ export default function Home() {
             </motion.div>
             <div>
               <h1 className="text-base font-semibold tracking-tight">EverLearn ML</h1>
-              <p className="text-xs text-[var(--muted)]">Teachable Machine · Build your own classifier</p>
+              <p className="text-xs text-[var(--muted)]">Self-Improving Image Classifier</p>
             </div>
           </div>
           <DarkModeToggle />
@@ -208,7 +208,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-[var(--border-color)] backdrop-blur-md bg-[var(--background)]/60">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-center text-xs text-[var(--muted)]">
-          <p>EverLearn ML · Teachable Machine · PyTorch + FastAPI</p>
+          <p>EverLearn ML · PyTorch + FastAPI</p>
         </div>
       </footer>
     </main>

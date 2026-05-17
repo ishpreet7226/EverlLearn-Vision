@@ -75,7 +75,6 @@ export default function TeachPage() {
         </h2>
         <p className="text-sm text-[var(--muted)] mt-2 max-w-lg mx-auto">
           Create classes, upload images, train a model, and test predictions — all from the browser.
-          Just like Teachable Machine.
         </p>
       </motion.div>
 
@@ -131,7 +130,7 @@ export default function TeachPage() {
       {/* Footer */}
       <footer className="border-t border-[var(--border-color)] backdrop-blur-md bg-[var(--background)]/60">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between text-xs text-[var(--muted)]">
-          <p>EverLearn ML · Teachable Machine · PyTorch + FastAPI</p>
+          <p>EverLearn ML · PyTorch + FastAPI</p>
           <p>
             <Link href="/" className="hover:text-purple-400 transition-colors">
               Switch to Predict mode →
