@@ -6,7 +6,6 @@ import Link from "next/link";
 import DatasetBuilder, { DEFAULT_CLASSES } from "./components/DatasetBuilder";
 import TrainingPanel from "./components/TrainingPanel";
 import PredictionPanel from "./components/PredictionPanel";
-import DarkModeToggle from "../components/DarkModeToggle";
 
 export default function TeachPage() {
   const [classes, setClasses] = useState(
@@ -55,7 +54,6 @@ export default function TeachPage() {
             >
               ← Back to Predict
             </Link>
-            <DarkModeToggle />
           </div>
         </div>
       </header>

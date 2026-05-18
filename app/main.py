@@ -419,7 +419,7 @@ async def teach_train(
     batch_size: int = Form(32),
 ):
     # Validate backbone
-    supported = ["resnet18", "resnet50", "efficientnet_b0", "mobilenet_v3_small"]
+    supported = ["resnet18"]
     if backbone not in supported:
         raise HTTPException(
             status_code=400,

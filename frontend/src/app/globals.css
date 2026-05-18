@@ -13,9 +13,8 @@
   --font-sans: var(--font-inter);
 }
 
-/* ── Dark theme (default) ──────────────────────────────────────────────────── */
-:root,
-[data-theme="dark"] {
+/* ── Theme (Dark by default) ──────────────────────────────────────────────────── */
+:root {
   --background: #0a0e1a;
   --foreground: #e8ecf4;
   --surface: rgba(255, 255, 255, 0.04);
@@ -26,20 +25,6 @@
   --muted: #6b7280;
   --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   --glow-color: rgba(124, 92, 252, 0.15);
-}
-
-/* ── Light theme ───────────────────────────────────────────────────────────── */
-[data-theme="light"] {
-  --background: #f8fafc;
-  --foreground: #1e293b;
-  --surface: rgba(0, 0, 0, 0.02);
-  --surface-hover: rgba(0, 0, 0, 0.05);
-  --border-color: rgba(0, 0, 0, 0.08);
-  --accent: #7c5cfc;
-  --accent-light: #6d4de8;
-  --muted: #94a3b8;
-  --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-  --glow-color: rgba(124, 92, 252, 0.08);
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────────── */
@@ -101,10 +86,6 @@ body {
   height: 10px;
 }
 
-[data-theme="light"] .prob-bar-track {
-  background: rgba(0, 0, 0, 0.06);
-}
-
 .prob-bar-fill {
   height: 100%;
   border-radius: 999px;
@@ -131,10 +112,6 @@ body {
 
 .confidence-ring .track {
   stroke: rgba(255, 255, 255, 0.06);
-}
-
-[data-theme="light"] .confidence-ring .track {
-  stroke: rgba(0, 0, 0, 0.06);
 }
 
 .confidence-ring .fill {

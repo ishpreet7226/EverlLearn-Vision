@@ -197,7 +197,7 @@ export default function FolderUploader({ onDatasetReady, disabled = false }) {
                   </p>
                 </div>
                 <div className="text-[10px] text-[var(--muted)] bg-[var(--surface)] rounded-lg px-3 py-1.5 mt-1">
-                  dataset/ → cats/ + dogs/ → auto train/val split
+                  dataset/ → cats/ + dogs/
                 </div>
               </div>
             </motion.button>
@@ -262,7 +262,7 @@ export default function FolderUploader({ onDatasetReady, disabled = false }) {
                         {files.length} image{files.length !== 1 ? "s" : ""}
                       </span>
                       <span className="text-[10px] text-[var(--muted)] ml-auto">
-                        ~{Math.round(files.length * 0.8)} train · ~{Math.max(1, Math.round(files.length * 0.2))} val
+                        Ready to train
                       </span>
                     </div>
                     {/* Thumbnail strip */}
@@ -306,7 +306,7 @@ export default function FolderUploader({ onDatasetReady, disabled = false }) {
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-20" />
                     <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                   </svg>
-                  Uploading & splitting…
+                  Uploading...
                 </>
               ) : (
                 <>
@@ -314,13 +314,13 @@ export default function FolderUploader({ onDatasetReady, disabled = false }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
-                  Upload & Create Train/Val Split
+                  Upload Data
                 </>
               )}
             </motion.button>
 
             <p className="text-[10px] text-center text-[var(--muted)]">
-              80% of images → training · 20% → validation (for testing)
+              User will only enter data to train
             </p>
           </motion.div>
         )}
@@ -363,7 +363,7 @@ export default function FolderUploader({ onDatasetReady, disabled = false }) {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-emerald-400">Dataset ready!</p>
               <p className="text-[10px] text-[var(--muted)]">
-                {uploadResult.total_images} images · {uploadResult.classes.length} classes · Train/val split complete
+                {uploadResult.total_images} images · {uploadResult.classes.length} classes
               </p>
             </div>
           </motion.div>

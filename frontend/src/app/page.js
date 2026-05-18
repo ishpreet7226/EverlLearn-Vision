@@ -6,7 +6,6 @@ import DatasetBuilder, { DEFAULT_CLASSES } from "./teach/components/DatasetBuild
 import FolderUploader from "./teach/components/FolderUploader";
 import TrainingPanel from "./teach/components/TrainingPanel";
 import PredictionPanel from "./teach/components/PredictionPanel";
-import DarkModeToggle from "./components/DarkModeToggle";
 
 const MODES = [
   {
@@ -75,7 +74,6 @@ export default function Home() {
               <p className="text-xs text-[var(--muted)]">Self-Improving Image Classifier</p>
             </div>
           </div>
-          <DarkModeToggle />
         </div>
       </header>
 

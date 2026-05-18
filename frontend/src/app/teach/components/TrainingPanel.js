@@ -5,9 +5,6 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const BACKBONES = [
   { value: "resnet18", label: "ResNet-18", desc: "Fast, lightweight" },
-  { value: "resnet50", label: "ResNet-50", desc: "More accurate" },
-  { value: "efficientnet_b0", label: "EfficientNet-B0", desc: "Balanced" },
-  { value: "mobilenet_v3_small", label: "MobileNet-V3", desc: "Tiny & fast" },
 ];
 
 const getApiUrl = () => {

@@ -2,7 +2,7 @@
 EverLearn Vision – Model Builder
 ==================================
 Wraps pretrained torchvision backbones with a custom classifier head.
-Supports: resnet18, resnet50, efficientnet_b0, mobilenet_v3_small
+Supports: resnet18
 
 VIVA NOTE — What is Transfer Learning?
   Instead of training a model from random weights (which needs millions of images),
@@ -44,7 +44,7 @@ import torch.nn as nn
 from torchvision import models
 
 
-SUPPORTED_BACKBONES = ["resnet18", "resnet50", "efficientnet_b0", "mobilenet_v3_small"]
+SUPPORTED_BACKBONES = ["resnet18"]
 
 
 def get_device() -> torch.device:
@@ -109,26 +109,6 @@ def build_model(
         # model.fc.in_features = 512 (features going INTO the final layer).
         # We replace it with a new 512→num_classes Linear layer.
         model.fc = nn.Linear(model.fc.in_features, num_classes)
-
-    elif backbone == "resnet50":
-        # ResNet-50: 50 layers, ~25M parameters, more accurate but slower
-        model = models.resnet50(weights=weights_arg)
-        # in_features = 2048 for ResNet-50 (wider than ResNet-18)
-        model.fc = nn.Linear(model.fc.in_features, num_classes)
-
-    elif backbone == "efficientnet_b0":
-        # EfficientNet scales width, depth, and resolution together.
-        # classifier is a Sequential; index [1] holds the final Linear layer.
-        model = models.efficientnet_b0(weights=weights_arg)
-        in_features = model.classifier[1].in_features  # 1280
-        model.classifier[1] = nn.Linear(in_features, num_classes)
-
-    elif backbone == "mobilenet_v3_small":
-        # MobileNet uses depthwise separable convolutions — tiny and fast,
-        # designed for mobile/edge devices. classifier[-1] is index [3].
-        model = models.mobilenet_v3_small(weights=weights_arg)
-        in_features = model.classifier[3].in_features  # 1024
-        model.classifier[3] = nn.Linear(in_features, num_classes)
 
     return model
 

@@ -1,6 +1,5 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
-import ThemeProvider from "./components/ThemeProvider";
 import { ToastProvider } from "./components/Toast";
 
 const inter = Inter({
@@ -19,9 +18,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </ThemeProvider>
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );
